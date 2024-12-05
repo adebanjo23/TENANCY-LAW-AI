@@ -406,147 +406,64 @@ class StreamlitApp:
                         st.error(f"❌ Error: {str(e)}")
 
     def render_contract_analyzer(self):
+        """Render the contract analyzer interface with improved file handling"""
         st.title("📄 Rental Contract Analyzer")
+        st.markdown(
+            "Upload or paste your rental contract to analyze it against the Ontario Tenancy Law."
+        )
 
-        # Introduction card with better spacing and layout
-        st.markdown("""
-        <div class="analysis-card" style="margin-bottom: 2rem;">
-            <h3 style="color: #2C3E50; margin-bottom: 1rem;">📊 Contract Analysis Tool</h3>
-            <p style="font-size: 1.1em; margin-bottom: 1rem;">Upload your rental agreement for a comprehensive analysis:</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-                <div>
-                    <h4 style="color: #34495E;">Key Features:</h4>
-                    <ul style="list-style: none; padding-left: 0;">
-                        <li style="margin: 0.5rem 0;"><span style="color: #27AE60;">✓</span> Legal compliance check</li>
-                        <li style="margin: 0.5rem 0;"><span style="color: #27AE60;">✓</span> Clause analysis</li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 style="color: #34495E;">Benefits:</h4>
-                    <ul style="list-style: none; padding-left: 0;">
-                        <li style="margin: 0.5rem 0;"><span style="color: #27AE60;">✓</span> Rights review</li>
-                        <li style="margin: 0.5rem 0;"><span style="color: #27AE60;">✓</span> Expert recommendations</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Input method selection with better visual hierarchy
         input_method = st.radio(
-            "Select Input Method:",
-            ["Upload Document", "Paste Text"],
-            format_func=lambda x: "📎 " + x if x == "Upload Document" else "📝 " + x,
-            horizontal=True,
-            key="input_method"
+            "How would you like to input your contract?",
+            ["Upload Document", "Paste Text"]
         )
 
         contract_text = None
+        if input_method == "Upload Document":
+            uploaded_file = st.file_uploader(
+                "Upload your rental agreement",
+                type=['txt', 'pdf', 'docx']
+            )
+            if uploaded_file:
+                with st.spinner("Processing document..."):
+                    try:
+                        contract_text = asyncio.run(
+                            self.process_uploaded_file(uploaded_file)
+                        )
+                        if contract_text:
+                            st.success(f"Successfully processed {uploaded_file.name}")
+                    except Exception as e:
+                        st.error(f"Error processing document: {str(e)}")
+        else:
+            contract_text = st.text_area(
+                "Paste your rental agreement here",
+                height=300,
+                placeholder="Paste the full text of your rental agreement..."
+            )
 
-        # Create columns for better layout
-        col1, col2 = st.columns([2, 1])
-
-        with col1:
-            if input_method == "Upload Document":
-                uploaded_file = st.file_uploader(
-                    "Drop your rental agreement here",
-                    type=['txt', 'pdf', 'docx'],
-                    help="Supported formats: PDF, Word, and Text files",
-                    key="file_uploader"
-                )
-
-                if uploaded_file:
-                    st.markdown(f"""
-                    <div class="uploadedFile" style="margin: 1rem 0;">
-                        <div style="display: flex; align-items: center; justify-content: center; padding: 1rem;">
-                            <span style="font-size: 2em; margin-right: 10px;">📄</span>
-                            <span style="font-size: 1.1em;">{uploaded_file.name}</span>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    with st.spinner("📑 Processing document..."):
-                        contract_text = asyncio.run(self.process_uploaded_file(uploaded_file))
-            else:
-                contract_text = st.text_area(
-                    "Paste your rental agreement",
-                    height=300,
-                    placeholder="Copy and paste your rental agreement here...",
-                    help="Your text will be analyzed for compliance with Ontario tenancy laws",
-                    key="text_input"
-                )
-
-        with col2:
-            st.markdown("<br>" * 3, unsafe_allow_html=True)  # Add some spacing
-            if contract_text:
-                if st.button("🔍 Analyze Contract", use_container_width=True, key="analyze_button"):
-                    self._analyze_contract_text(contract_text)
+        if st.button("Analyze Contract") and contract_text:
+            self._analyze_contract_text(contract_text)
 
     def _analyze_contract_text(self, contract_text: str):
-        with st.spinner("🔍 Analyzing your contract..."):
+        """Analyze contract text and display results"""
+        with st.spinner("Analyzing your contract..."):
             try:
                 analysis = self.assistant.analyze_contract(contract_text)
 
-                # Clear previous content
-                st.empty()
+                st.success("Analysis Complete!")
 
-                # Success message with animation
-                st.success("✅ Analysis Complete!")
+                with st.expander("Contract Analysis", expanded=True):
+                    st.markdown(analysis)
 
-                # Analysis report with improved layout
-                st.markdown("""
-                <style>
-                    .report-container {
-                        background: white;
-                        border-radius: 10px;
-                        padding: 2rem;
-                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                        margin: 2rem 0;
-                    }
-                    .report-section {
-                        margin-bottom: 2rem;
-                        padding: 1.5rem;
-                        background: #f8f9fa;
-                        border-radius: 8px;
-                    }
-                    .report-header {
-                        color: #2C3E50;
-                        border-bottom: 2px solid #E74C3C;
-                        padding-bottom: 1rem;
-                        margin-bottom: 2rem;
-                    }
-                </style>
-                <div class="report-container">
-                    <h2 class="report-header">📊 Contract Analysis Report</h2>
-                """, unsafe_allow_html=True)
-
-                # Split analysis into sections and display with better formatting
-                st.markdown(f"""
-                <div class="report-section">
-                    <h3 style="color: #34495E;">Key Findings</h3>
-                    {analysis}
-                </div>
-                """, unsafe_allow_html=True)
-
-                # Action buttons in a better layout
-                col1, col2, col3 = st.columns([1, 2, 1])
-                with col2:
-                    st.download_button(
-                        label="📥 Download Full Report",
-                        data=analysis,
-                        file_name="contract_analysis_report.txt",
-                        mime="text/plain",
-                        use_container_width=True
-                    )
+                st.download_button(
+                    label="Download Analysis Report",
+                    data=analysis,
+                    file_name="contract_analysis_report.txt",
+                    mime="text/plain"
+                )
 
             except Exception as e:
-                st.error(f"""
-                ❌ Analysis failed
-
-                Error details: {str(e)}
-
-                Please try again or contact support if the problem persists.
-                """)
+                self.logger.error(f"Contract analysis failed: {str(e)}")
+                st.error(f"Analysis failed: {str(e)}")
 
     def render_sidebar(self):
         with st.sidebar:
