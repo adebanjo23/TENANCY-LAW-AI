@@ -1,0 +1,25 @@
+graph TB
+    UI[Streamlit UI]
+    LA[Legal Assistant]
+    DP[Document Processor]
+    LLMF[LLM Factory]
+
+    subgraph LLM Providers
+        OAI[OpenAI]
+        GRQ[Groq]
+        ANT[Anthropic]
+        GEM[Gemini]
+    end
+
+    subgraph Document Processing
+        LP[LlamaParse API]
+        PA[Parser Analysis]
+    end
+
+    UI --> LA
+    UI --> DP
+    DP --> LP
+    LP --> PA
+    PA --> LLMF
+    LA --> LLMF
+    LLMF --> OAI & GRQ & ANT & GEM
